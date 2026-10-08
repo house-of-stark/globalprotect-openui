@@ -1,7 +1,7 @@
 # GP OpenUI
 A free, open-source macOS GUI for [GlobalProtect VPNs](https://www.paloaltonetworks.com/network-security/globalprotect). Built with [Tauri](https://tauri.app) (Rust + React).
 
-> **⚠️ This is a fork** of [MagiShira/globalprotect-openconnect-openui](https://github.com/MagiShira/globalprotect-openconnect-openui), which provides the Linux front-end for the upstream GlobalProtect-openconnect project. This fork adds macOS support by spawning `openconnect` directly instead of relying on the Linux-only `gpservice` daemon.
+> **ℹ️ This project originated as a fork** of [MagiShira/globalprotect-openconnect-openui](https://github.com/MagiShira/globalprotect-openconnect-openui), which provides the Linux front-end for the upstream GlobalProtect-openconnect project. This fork adds macOS support by spawning `openconnect` directly instead of relying on the Linux-only `gpservice` daemon, and is now the primary macOS client for GlobalProtect-openconnect.
 
 > **Note:** The official GlobalProtect GUI (`gpgui`) from the upstream project recently added a paywall. This project is an unaffected open-source alternative.
 
@@ -77,6 +77,11 @@ The upstream GlobalProtect-openconnect project's `gpgui` binary is both propriet
 ### Option A: Quick Install (Pre-built Release)
 
 1. Download `GP.OpenUI_*.dmg` from the [latest release](https://github.com/house-of-stark/globalprotect-openui/releases/latest), open it, and drag `GP OpenUI.app` to Applications
+
+   > **Note:** The app is unsigned (no Apple Developer signing). The first time you open it, Gatekeeper may say the developer cannot be verified. Right-click → Open, or run:
+   > ```bash
+   > xattr -dr com.apple.quarantine /Applications/GP\ OpenUI.app
+   > ```
 3. Install prerequisites:
 
    ```bash
