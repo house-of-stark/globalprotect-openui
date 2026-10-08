@@ -76,8 +76,7 @@ The upstream GlobalProtect-openconnect project's `gpgui` binary is both propriet
 
 ### Option A: Quick Install (Pre-built Release)
 
-1. Download `GP.OpenUI.v*.app.zip` from the [latest release](https://github.com/house-of-stark/globalprotect-openui/releases/latest)
-2. Unzip and move `GP OpenUI.app` to your Applications folder
+1. Download `GP.OpenUI_*.dmg` from the [latest release](https://github.com/house-of-stark/globalprotect-openui/releases/latest), open it, and drag `GP OpenUI.app` to Applications
 3. Install prerequisites:
 
    ```bash
