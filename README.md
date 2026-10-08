@@ -78,10 +78,11 @@ The upstream GlobalProtect-openconnect project's `gpgui` binary is both propriet
 
 1. Download `GP.OpenUI_*.dmg` from the [latest release](https://github.com/house-of-stark/globalprotect-openui/releases/latest), open it, and drag `GP OpenUI.app` to Applications
 
-   > **Note:** The app is unsigned (no Apple Developer signing). The first time you open it, Gatekeeper may say the developer cannot be verified. Right-click → Open, or run:
+   > **Note:** The app is unsigned by default (no Apple Developer signing). The first time you open it, Gatekeeper may say the developer cannot be verified. Right-click → Open, or run:
    > ```bash
    > xattr -dr com.apple.quarantine /Applications/GP\ OpenUI.app
    > ```
+   > If you have an Apple Developer account, you can sign and notarize builds yourself — see [docs/signing.md](docs/signing.md) for setup.
 3. Install prerequisites:
 
    ```bash
