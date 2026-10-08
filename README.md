@@ -13,9 +13,19 @@ A common question: *Does GlobalProtect enforce security policies on my machine a
 
 - Execute code or scan files on your machine
 - Verify what VPN client binary you're running
-- Enforce post-connect host compliance — the "client check" is a self-reported questionnaire during the login handshake, not a host audit
+- Enforce post-connect host compliance
 
-The official GlobalProtect client and this open-source implementation both complete the same GP protocol handshake (portal prelogin, SAML/SSO login, gateway authentication). **There is no binary attestation in the GP protocol** — the server trusts what the client reports.
+### About HIP (Host Information Profile)
+
+HIP is real, and it's worth being precise about it, because there are two different modes:
+
+1. **Agentless HIP (the common case)** — during the login handshake, the portal sends an XML profile asking the client to *report* its posture: OS, anti-virus, disk encryption, firewall state. The client answers, and the gateway enforces based on that **self-reported answer**. There is no host inspection — the server only sees whatever the client claims. This is the mode an open-source client participates in: it simply reports a compliant posture.
+
+2. **Agent-based HIP (official GlobalProtect agent only)** — newer deployments push a background agent that collects *real* host data (file hashes, running AV) and submits a HIP report. Crucially, this agent runs **on your machine, on its own initiative**, and re-checks only when *it* decides to. The server can *request* a re-check but has no channel to force one — remove the agent, and there is nothing left for the server to enforce against.
+
+**The key point:** HIP enforcement lives entirely in either (a) the self-reported handshake, or (b) a client-side agent you'd have to be running yourself. The server has **no mechanism to inspect or control your host mid-session**. 
+
+The official client and this open-source implementation both complete the same GP protocol handshake (portal prelogin, SAML/SSO login, gateway authentication). **There is no binary attestation in the GP protocol** — the server trusts what the client reports.
 
 Once the tunnel is established, the only controls the VPN gateway has are standard: route policies, DNS assignment, ACLs, and session timeouts. These apply equally regardless of which VPN software you use.
 
