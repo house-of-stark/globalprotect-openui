@@ -34,7 +34,7 @@ The official client and this open-source implementation both complete the same G
 Once the tunnel is established, the only controls the VPN gateway has are standard: route policies, DNS assignment, ACLs, and session timeouts. These apply equally regardless of which VPN software you use.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/f19f05b5-1818-4f48-98be-4fc5b83b605f" />
+  <img src="screenshots/gp-openui-macos.png" />
 </p>
 
 ## About
@@ -72,7 +72,37 @@ The upstream GlobalProtect-openconnect project's `gpgui` binary is both propriet
 
 ### macOS
 
-**Prerequisites:** Homebrew, Xcode Command Line Tools (`xcode-select --install`), and `openconnect` (install via `brew install openconnect`).
+**macOS users** can either [download the latest release](https://github.com/house-of-stark/globalprotect-openui/releases/latest) (just unzip and run) or build from source:
+
+### Option A: Quick Install (Pre-built Release)
+
+1. Download `GP.OpenUI.v*.app.zip` from the [latest release](https://github.com/house-of-stark/globalprotect-openui/releases/latest)
+2. Unzip and move `GP OpenUI.app` to your Applications folder
+3. Install prerequisites:
+
+   ```bash
+   brew install openconnect
+   ```
+
+4. **SAML/SSO authentication** requires the `gpauth` binary. Build it from the upstream project:
+
+   ```bash
+   git clone https://github.com/yuezk/GlobalProtect-openconnect /tmp/gp-upstream
+   cd /tmp/gp-upstream
+   rm -f rust-toolchain.toml
+   cargo build --release -p gpauth --no-default-features
+   sudo install -m 755 target/release/gpauth /opt/homebrew/bin/gpauth
+   ```
+
+5. Launch `GP OpenUI.app` from Applications
+
+### Option B: Build from Source
+
+**Prerequisites:** Homebrew, Xcode Command Line Tools (`xcode-select --install`), Rust, Node.js, pnpm, and `openconnect`:
+
+```bash
+brew install openconnect
+```
 
 **SAML/SSO authentication** requires the `gpauth` binary from the upstream [GlobalProtect-openconnect](https://github.com/yuezk/GlobalProtect-openconnect) project. Build it first:
 
