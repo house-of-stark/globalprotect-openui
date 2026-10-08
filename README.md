@@ -1,7 +1,9 @@
 # GP OpenUI
-An open-source graphical front-end for the [GlobalProtect-openconnect](https://github.com/yuezk/GlobalProtect-openconnect) CLI tools, supporting password and SSO (SAML) authentication.
+A free, open-source macOS GUI for [GlobalProtect VPNs](https://www.paloaltonetworks.com/network-security/globalprotect). Built with [Tauri](https://tauri.app) (Rust + React).
 
-> **⚠️ This is a fork** of [MagiShira/globalprotect-openconnect-openui](https://github.com/MagiShira/globalprotect-openconnect-openui). Upstream (yuezk/GlobalProtect-openconnect) dropped the `install.sh` release asset — this fork adapts the installer to use the current per-distro package repos (PPA / COPR / Arch extra). Pull requests are welcome.
+> **⚠️ This is a fork** of [MagiShira/globalprotect-openconnect-openui](https://github.com/MagiShira/globalprotect-openconnect-openui), which provides the Linux front-end for the upstream GlobalProtect-openconnect project. This fork adds macOS support by spawning `openconnect` directly instead of relying on the Linux-only `gpservice` daemon.
+
+> **Note:** The official GlobalProtect GUI (`gpgui`) from the upstream project recently added a paywall. This project is an unaffected open-source alternative.
 
 > **Disclaimer:** This is an unofficial third-party client and is not affiliated with or endorsed by Palo Alto Networks. GlobalProtect is a registered trademark of Palo Alto Networks.
 
@@ -37,16 +39,18 @@ Once the tunnel is established, the only controls the VPN gateway has are standa
 
 ## About
 
-GP OpenUI is a custom GUI for the `gpclient` / `gpservice` daemon stack from [GlobalProtect-openconnect](https://github.com/yuezk/GlobalProtect-openconnect). It replaces the upstream `gpgui` binary with a free and open-source interface built with [Tauri](https://tauri.app) (Rust + React).
+GP OpenUI is a Tauri-based GUI for GlobalProtect VPNs on **macOS** (with Linux support via the upstream daemon stack).
+
+On macOS, it replaces the entire GlobalProtect client: it handles SAML/SSO browser authentication and then spawns the Homebrew `openconnect` binary for the VPN tunnel — no proprietary daemon required.
 
 ### Why?
 
-The upstream `gpgui` binary is proprietary-- you can't study, modify, or share it. For a VPN client handling your credentials and network traffic, that matters. GP OpenUI is [free software](https://www.fsf.org/about/what-is-free-software).
+The upstream GlobalProtect-openconnect project's `gpgui` binary is both proprietary and now paywalled. For a VPN client handling your credentials and network traffic, that matters. GP OpenUI is [free software](https://www.fsf.org/about/what-is-free-software).
 
 ## Features
 
 - **Password authentication** — standard username/password login
-- **SSO/SAML authentication** — embedded WebView or external browser
+- **SSO/SAML authentication** — opens your default browser for login (works with Okta, Azure AD, PingID, etc.)
 - **Client certificate authentication** — PKCS#8 (`.pem`) and PKCS#12 (`.p12`/`.pfx`)
 - **Cookie reuse** — stay logged in across SAML sessions
 - **OS spoofing** — present as Linux, Windows, or macOS to the portal
@@ -54,7 +58,8 @@ The upstream `gpgui` binary is proprietary-- you can't study, modify, or share i
 - **Tunnel options** — disable IPv6, disable DTLS, custom MTU, VPNC script, reconnect timeout
 - **Theme support** — light, dark, and system-follow modes
 - **Settings window** — persistent per-user settings stored locally
-- **Wayland and X11** — native Wayland support, X11 fallback
+- **System tray** — minimize to tray with connection status and quick controls
+- **Native macOS bundle** — distributable `.app` with the standard macOS auth dialog for privilege escalation
 
 ## Roadmap
 
@@ -65,7 +70,23 @@ The upstream `gpgui` binary is proprietary-- you can't study, modify, or share i
 
 ## Installation
 
-Run the install script as a regular user (it uses `sudo` internally where root is required):
+### macOS
+
+**Prerequisites:** Homebrew, Xcode Command Line Tools (`xcode-select --install`), and `openconnect` (install via `brew install openconnect`).
+
+**SAML/SSO authentication** requires the `gpauth` binary from the upstream [GlobalProtect-openconnect](https://github.com/yuezk/GlobalProtect-openconnect) project. Build it first:
+
+```bash
+git clone https://github.com/yuezk/GlobalProtect-openconnect /tmp/gp-upstream
+cd /tmp/gp-upstream
+# Remove pinned toolchain to use your system Rust
+rm -f rust-toolchain.toml
+# Build with SAML support only (no webview dependency)
+cargo build --release -p gpauth --no-default-features
+sudo install -m 755 target/release/gpauth /opt/homebrew/bin/gpauth
+```
+
+Then run the install script:
 
 ```bash
 ./install.sh
@@ -73,20 +94,43 @@ Run the install script as a regular user (it uses `sudo` internally where root i
 
 The script will:
 
-1. Install system build dependencies (varies by platform — Xcode CLI tools on macOS, WebKitGTK/GTK3 on Linux)
+1. Verify Xcode CLI tools are installed
 2. Install Rust (≥ 1.85) via `rustup` if not already present
 3. Install Node.js LTS and pnpm if not already present
-4. Install GlobalProtect-openconnect (`gpservice` + `gpclient`) from the upstream package repository
-5. Build this Tauri app (`pnpm install` + `cargo tauri build`)
-6. Replace the system `gpgui` binary with the newly built binary (the original is backed up as `gpgui.upstream`)
+4. Build this Tauri app (`pnpm install` + `cargo tauri build`)
+5. Install the `gpgui` binary to `/usr/local/bin/`
 
-**Supported platforms:**
-- **Linux:** Debian/Ubuntu, Fedora/RHEL, Arch Linux
-- **macOS (experimental):** Homebrew — build deps are auto-installed, but the upstream `GlobalProtect-openconnect` package has no Homebrew formula and must be [built from source manually](https://github.com/yuezk/GlobalProtect-openconnect#installation).
+> **Note:** The upstream `GlobalProtect-openconnect` daemon (`gpservice`/`gpclient`) is **not required on macOS**. This app uses `openconnect` directly for the VPN tunnel (available via `brew install openconnect`).
+
+To run directly from the build:
+
+```bash
+open src-tauri/target/release/bundle/macos/GP\ OpenUI.app
+```
+
+### Linux
+
+See the [original repo](https://github.com/MagiShira/globalprotect-openconnect-openui) for Linux installation instructions.
 
 ## Usage
 
-After installation, launch the GUI through your application launcher or via:
+### macOS
+
+Launch from your Applications folder, or via:
+
+```bash
+open src-tauri/target/release/bundle/macos/GP\ OpenUI.app
+```
+
+Or run the CLI binary directly:
+
+```bash
+/usr/local/bin/gpgui
+```
+
+### Linux
+
+Launch through your application launcher or via:
 
 ```bash
 gpclient launch-gui
@@ -94,7 +138,7 @@ gpclient launch-gui
 
 ### Legacy TLS Configurations
 
-Some GlobalProtect installations use older TLS configurations (e.g. deprecated ciphers or older protocol versions) that are rejected by the system OpenSSL by default. If the GUI fails to connect with a TLS handshake error, use the `--fix-openssl` flag:
+Some GlobalProtect installations use older TLS configurations (e.g. deprecated ciphers or older protocol versions) that are rejected by the system OpenSSL by default. If the GUI fails to connect with a TLS handshake error, use the `--fix-openssl` flag (Linux only):
 
 ```bash
 gpclient --fix-openssl launch-gui
@@ -103,9 +147,10 @@ gpclient --fix-openssl launch-gui
 
 ## Requirements
 
+- **macOS:** Apple Silicon or Intel, macOS 13+, Homebrew with `openconnect` installed
 - **Linux:** X11 or Wayland, with `apt`, `dnf`, or `pacman`
-- **macOS (experimental):** Homebrew, Xcode Command Line Tools
-- Internet access to download build tools and the upstream GP packages
+- Internet access to download build tools
+- The `gpauth` binary must exist at `/opt/homebrew/bin/gpauth` (built from the upstream [GlobalProtect-openconnect](https://github.com/yuezk/GlobalProtect-openconnect) project) for SAML/SSO browser authentication
 
 ## License
 

@@ -269,8 +269,8 @@ main() {
 
   info "=== Done! ==="
   if is_macos; then
-    info "GP OpenUI has been built and installed to /usr/local/bin/gpgui."
-    info "Launch it via: gpgui"
+    info "GP OpenUI has been built and installed."
+    info "Launch it from your Applications folder or run: open src-tauri/target/release/bundle/macos/GP\\ OpenUI.app"
   else
     info "You can now launch GP OpenUI via your application launcher or by running: gpclient launch-gui"
   fi

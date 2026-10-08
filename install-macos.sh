@@ -3,6 +3,9 @@
 #
 # Called by install.sh when running on Darwin. Provides macOS-specific
 # implementations for build deps, node install, and binary placement.
+#
+# On macOS, GP OpenUI uses Homebrew's openconnect binary directly for the
+# VPN tunnel — no gpservice/gpclient daemon is needed.
 
 set -euo pipefail
 
@@ -35,6 +38,19 @@ install_build_deps() {
   else
     info "  Xcode CLI tools already installed at: $(xcode-select -p)"
   fi
+
+  info "  Checking Homebrew..."
+  if ! have brew; then
+    info "  Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+
+  info "  Checking openconnect..."
+  if ! have openconnect; then
+    info "  Installing openconnect via Homebrew..."
+    brew install openconnect
+  fi
+
   info "Build dependencies installed."
 }
 
@@ -68,39 +84,29 @@ install_pnpm() {
 }
 
 # ---------------------------------------------------------------------------
-# 3. GlobalProtect-openconnect (macOS — no Homebrew formula)
+# 3. GlobalProtect-openconnect (macOS — not needed)
 # ---------------------------------------------------------------------------
 install_gp_upstream() {
-  if have gpservice && have gpclient; then
-    info "GlobalProtect-openconnect already installed; skipping upstream install."
-    return
-  fi
-
-  warn "GlobalProtect-openconnect does not have a Homebrew formula."
-  warn "Install it manually by following the instructions at:"
-  warn "  https://github.com/yuezk/GlobalProtect-openconnect#installation"
-  warn "For macOS, build from source:"
-  warn "  git clone https://github.com/yuezk/GlobalProtect-openconnect"
-  warn "  cd GlobalProtect-openconnect && make && sudo make install"
-  warn ""
-  warn "Skipping upstream install — the GUI will not function without"
-  warn "gpservice and gpclient. Install them and re-run this script."
+  info "GP OpenUI on macOS uses Homebrew's openconnect binary directly."
+  info "No gpservice/gpclient daemon required — skipping upstream install."
 }
 
 # ---------------------------------------------------------------------------
-# 4. Install / replace the gpgui binary (macOS — /usr/local/bin)
+# 4. Install the gpgui binary and open the .app bundle (macOS)
 # ---------------------------------------------------------------------------
 install_binary() {
   local src="$REPO_DIR/src-tauri/target/release/$BINARY_NAME"
   local dest="/usr/local/bin/$BINARY_NAME"
 
   info "Installing $BINARY_NAME to $dest..."
-
-  if [[ -f "$dest" ]]; then
-    info "  Backing up existing binary to ${dest}.upstream..."
-    sudo cp --preserve=all "$dest" "${dest}.upstream"
-  fi
-
   sudo install -m 755 "$src" "$dest"
   info "Installed: $dest"
+
+  # Also open the .app bundle if it exists
+  local bundle_dir="$REPO_DIR/src-tauri/target/release/bundle/macos"
+  local app_name="GP OpenUI.app"
+  if [ -d "$bundle_dir/$app_name" ]; then
+    info "Opening $app_name..."
+    open "$bundle_dir/$app_name"
+  fi
 }
