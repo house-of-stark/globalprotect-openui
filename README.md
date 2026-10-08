@@ -25,6 +25,8 @@ HIP is real, and it's worth being precise about it, because there are two differ
 
 **The key point:** HIP enforcement lives entirely in either (a) the self-reported handshake, or (b) a client-side agent you'd have to be running yourself. The server has **no mechanism to inspect or control your host mid-session**. 
 
+**GP OpenUI's own capabilities:** this client supports **agentless HIP** — it submits a self-reported HIP report during connect (with an optional custom script, see Settings). It does **not** include or run a GlobalProtect agent: nothing collects host data in the background, and no periodic posture re-checks happen while connected. The agent-based HIP mode simply does not apply, because there is no agent to enforce.
+
 The official client and this open-source implementation both complete the same GP protocol handshake (portal prelogin, SAML/SSO login, gateway authentication). **There is no binary attestation in the GP protocol** — the server trusts what the client reports.
 
 Once the tunnel is established, the only controls the VPN gateway has are standard: route policies, DNS assignment, ACLs, and session timeouts. These apply equally regardless of which VPN software you use.
