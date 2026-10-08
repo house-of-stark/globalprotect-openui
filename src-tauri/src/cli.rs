@@ -27,6 +27,7 @@ impl Cli {
     let api_key = self.read_api_key()?;
     let app = App::new(api_key, self.minimized);
 
+    #[cfg(not(target_os = "macos"))]
     configure_display_backend();
 
     app.run()
@@ -39,10 +40,14 @@ impl Cli {
       let api_key = base64::decode_to_vec(api_key.trim())?;
       Ok(api_key)
     } else {
+      // On macOS, no gpservice secret handshake is required.
+      #[cfg(target_os = "macos")]
+      return Ok(vec![]);
+
       #[cfg(debug_assertions)]
       return Ok(GP_API_KEY.to_vec());
 
-      #[cfg(not(debug_assertions))]
+      #[cfg(all(not(debug_assertions), not(target_os = "macos")))]
       anyhow::bail!("API key must be provided via --api-key-on-stdin in release mode");
     }
   }

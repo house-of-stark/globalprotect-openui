@@ -5,6 +5,20 @@ An open-source graphical front-end for the [GlobalProtect-openconnect](https://g
 
 > **Disclaimer:** This is an unofficial third-party client and is not affiliated with or endorsed by Palo Alto Networks. GlobalProtect is a registered trademark of Palo Alto Networks.
 
+## Security Model
+
+A common question: *Does GlobalProtect enforce security policies on my machine after I connect?*
+
+**No.** GlobalProtect — like all SSL VPNs — is a **layer 3 tunnel** (IP packets through a virtual network interface). The server cannot:
+
+- Execute code or scan files on your machine
+- Verify what VPN client binary you're running
+- Enforce post-connect host compliance — the "client check" is a self-reported questionnaire during the login handshake, not a host audit
+
+The official GlobalProtect client and this open-source implementation both complete the same GP protocol handshake (portal prelogin, SAML/SSO login, gateway authentication). **There is no binary attestation in the GP protocol** — the server trusts what the client reports.
+
+Once the tunnel is established, the only controls the VPN gateway has are standard: route policies, DNS assignment, ACLs, and session timeouts. These apply equally regardless of which VPN software you use.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/f19f05b5-1818-4f48-98be-4fc5b83b605f" />
 </p>

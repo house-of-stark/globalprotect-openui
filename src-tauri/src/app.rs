@@ -5,8 +5,8 @@ use gpapi::service::{
   request::{DisconnectRequest, WsRequest},
   vpn_state::VpnState,
 };
-use log::{info, warn};
-use tauri::{
+#[allow(unused_imports)]
+use log::{info, warn};use tauri::{
   menu::{Menu, MenuItem},
   tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
   Emitter, Listener, Manager, RunEvent,
@@ -16,7 +16,9 @@ use tokio::sync::Mutex;
 // Wildcard import needed so generate_handler! can find __cmd__ companion macros
 #[allow(unused_imports)]
 use crate::commands::*;
-use crate::{commands::AppState, service_client::connect_to_service};
+use crate::{commands::AppState};
+#[cfg(not(target_os = "macos"))]
+use crate::service_client::connect_to_service;
 
 fn format_duration(secs: u64) -> String {
   let h = secs / 3600;
@@ -87,8 +89,12 @@ impl App {
   }
 
   pub fn run(self) -> anyhow::Result<()> {
-    let api_key = self.api_key;
     let minimized = self.minimized;
+
+    // On Linux, api_key is needed to authenticate with gpservice.
+    // On macOS, no secret handshake is required (openconnect is launched directly).
+    #[allow(unused_variables)]
+    let api_key = self.api_key;
     let state = AppState::new();
 
     let app = tauri::Builder::default()
@@ -300,7 +306,9 @@ impl App {
           });
         }
 
-        // Connect to gpservice in the background
+        // Connect to gpservice in the background (Linux only — macOS spawns
+        // openconnect directly via the openconnect_client backend).
+        #[cfg(not(target_os = "macos"))]
         tauri::async_runtime::spawn(async move {
           match connect_to_service(api_key, app_handle.clone(), Arc::clone(&client_store)).await {
             Ok(client) => {

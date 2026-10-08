@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use common::constants::{GP_CLIENT_VERSION, GP_USER_AGENT};
-use gpapi::{service::request::WsRequest, utils::host_utils};
+use gpapi::{service::vpn_state::VpnState, utils::host_utils};
+#[cfg(not(target_os = "macos"))]
+use gpapi::service::request::WsRequest;
 use log::info;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
@@ -12,12 +14,18 @@ use crate::{
   service_client::ServiceClient,
 };
 
+#[cfg(target_os = "macos")]
+use crate::openconnect_client::TunnelHandle;
+
 pub struct AppState {
   /// Arc so it can be cloned into 'static closures without lifetime issues
   pub client: Arc<Mutex<Option<ServiceClient>>>,
   pub auth_executable: Arc<Mutex<Option<String>>>,
   /// When true, the next SAML auth will pass --clean to clear stored cookies
   pub clean_next_auth: Arc<Mutex<bool>>,
+  /// macOS: manages the openconnect child process (Linux uses gpservice instead)
+  #[cfg(target_os = "macos")]
+  pub tunnel: Arc<Mutex<Option<TunnelHandle>>>,
 }
 
 impl AppState {
@@ -26,6 +34,8 @@ impl AppState {
       client: Arc::new(Mutex::new(None)),
       auth_executable: Arc::new(Mutex::new(None)),
       clean_next_auth: Arc::new(Mutex::new(false)),
+      #[cfg(target_os = "macos")]
+      tunnel: Arc::new(Mutex::new(None)),
     }
   }
 }
@@ -86,6 +96,7 @@ pub async fn clear_credentials(state: State<'_, AppState>) -> Result<(), String>
 
 #[tauri::command]
 pub async fn connect_saml(
+  app: AppHandle,
   portal: String,
   browser: Option<String>,
   reuse_auth_cookies: Option<bool>,
@@ -98,6 +109,7 @@ pub async fn connect_saml(
   state: State<'_, AppState>,
 ) -> Result<(), String> {
   // Fail fast before the long SAML browser flow if the service isn't ready
+  #[cfg(not(target_os = "macos"))]
   if state.client.lock().await.is_none() {
     return Err("Not connected to gpservice".to_string());
   }
@@ -133,22 +145,55 @@ pub async fn connect_saml(
     .await
     .map_err(|e| e.to_string())?;
 
-  let client = state.client.lock().await;
-  let Some(ref client) = *client else {
-    return Err("Not connected to gpservice".to_string());
-  };
+  #[cfg(target_os = "macos")]
+  {
+    // macOS: spawn openconnect directly (no gpservice)
+    let gateway = req.gateway().server().to_owned();
+    let cookie = req.args().cookie().to_owned();
+    let os_str = req.args().openconnect_os();
+    let disable_ipv6 = req.args().disable_ipv6();
+    let no_dtls = req.args().no_dtls();
+    let connect_info = req.info().clone();
 
-  client
-    .send(WsRequest::Connect(Box::new(req)))
-    .await
-    .map_err(|e| e.to_string())?;
+    let tunnel = TunnelHandle::new();
+    tunnel
+      .connect(
+        app,
+        &gateway,
+        &cookie,
+        os_str.as_deref(),
+        disable_ipv6,
+        no_dtls,
+        connect_info,
+      )
+      .await
+      .map_err(|e| e.to_string())?;
 
-  info!("ConnectRequest sent to gpservice");
-  Ok(())
+    *state.tunnel.lock().await = Some(tunnel);
+    info!("openconnect tunnel spawned");
+    Ok(())
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  {
+    let client = state.client.lock().await;
+    let Some(ref client) = *client else {
+      return Err("Not connected to gpservice".to_string());
+    };
+
+    client
+      .send(WsRequest::Connect(Box::new(req)))
+      .await
+      .map_err(|e| e.to_string())?;
+
+    info!("ConnectRequest sent to gpservice");
+    Ok(())
+  }
 }
 
 #[tauri::command]
 pub async fn connect_password(
+  app: AppHandle,
   portal: String,
   username: String,
   password: String,
@@ -175,18 +220,49 @@ pub async fn connect_password(
     .await
     .map_err(|e| e.to_string())?;
 
-  let client = state.client.lock().await;
-  let Some(ref client) = *client else {
-    return Err("Not connected to gpservice".to_string());
-  };
+  #[cfg(target_os = "macos")]
+  {
+    let gateway = req.gateway().server().to_owned();
+    let cookie = req.args().cookie().to_owned();
+    let os_str = req.args().openconnect_os();
+    let disable_ipv6 = req.args().disable_ipv6();
+    let no_dtls = req.args().no_dtls();
+    let connect_info = req.info().clone();
 
-  client
-    .send(WsRequest::Connect(Box::new(req)))
-    .await
-    .map_err(|e| e.to_string())?;
+    let tunnel = TunnelHandle::new();
+    tunnel
+      .connect(
+        app,
+        &gateway,
+        &cookie,
+        os_str.as_deref(),
+        disable_ipv6,
+        no_dtls,
+        connect_info,
+      )
+      .await
+      .map_err(|e| e.to_string())?;
 
-  info!("ConnectRequest sent to gpservice");
-  Ok(())
+    *state.tunnel.lock().await = Some(tunnel);
+    info!("openconnect tunnel spawned");
+    Ok(())
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  {
+    let client = state.client.lock().await;
+    let Some(ref client) = *client else {
+      return Err("Not connected to gpservice".to_string());
+    };
+
+    client
+      .send(WsRequest::Connect(Box::new(req)))
+      .await
+      .map_err(|e| e.to_string())?;
+
+    info!("ConnectRequest sent to gpservice");
+    Ok(())
+  }
 }
 
 #[tauri::command]
@@ -248,20 +324,34 @@ pub fn quit_app(app: AppHandle) {
 }
 
 #[tauri::command]
-pub async fn disconnect(state: State<'_, AppState>) -> Result<(), String> {
-  use gpapi::service::request::DisconnectRequest;
+pub async fn disconnect(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+  #[cfg(target_os = "macos")]
+  {
+    info!("Sending disconnect to openconnect tunnel");
+    let mut guard = state.tunnel.lock().await;
+    if let Some(tunnel) = guard.take() {
+      tunnel.disconnect().await.map_err(|e| e.to_string())?;
+    }
+    let _ = app.emit("vpn-state", VpnState::Disconnected);
+    Ok(())
+  }
 
-  info!("Sending disconnect request");
+  #[cfg(not(target_os = "macos"))]
+  {
+    use gpapi::service::request::DisconnectRequest;
 
-  let client = state.client.lock().await;
-  let Some(ref client) = *client else {
-    return Err("Not connected to gpservice".to_string());
-  };
+    info!("Sending disconnect request");
 
-  client
-    .send(WsRequest::Disconnect(DisconnectRequest))
-    .await
-    .map_err(|e| e.to_string())?;
+    let client = state.client.lock().await;
+    let Some(ref client) = *client else {
+      return Err("Not connected to gpservice".to_string());
+    };
 
-  Ok(())
+    client
+      .send(WsRequest::Disconnect(DisconnectRequest))
+      .await
+      .map_err(|e| e.to_string())?;
+
+    Ok(())
+  }
 }

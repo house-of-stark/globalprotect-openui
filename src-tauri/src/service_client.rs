@@ -1,3 +1,9 @@
+//! WebSocket client for communicating with the gpservice daemon (Linux-only).
+//! On macOS the tunnel is spawned directly via openconnect_client instead.
+// Some functions in this module appear dead when compiling for macOS since only
+// the Linux build uses them. That is expected.
+#![allow(dead_code)]
+
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
