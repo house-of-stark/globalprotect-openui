@@ -37,8 +37,6 @@
     "copyright": "GPL-2.0",
     "macOS": {
       "minimumSystemVersion": "13.0",
-      "signingIdentity": "-",
-      "hardenedRuntime": true,
       "entitlements": null,
       "dmg": {
         "windowSize": {

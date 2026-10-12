@@ -58,7 +58,8 @@ Add these to the repo's **Settings → Secrets and variables → Actions**:
 
 ## How it works
 
-- `tauri.conf.json` sets `macOS.hardenedRuntime = true` (required for notarization).
+- `tauri.conf.json` has `hardenedRuntime` unset by default (it only works with a real signing cert).
+- When using a real Developer ID cert, enable it in the config or via env var before building.
 - The CI workflow imports the `.p12` into a fresh keychain, then `tauri build` signs with `APPLE_SIGNING_IDENTITY` and notarizes automatically using the `APPLE_API_*` credentials (Tauri 2 calls `notarytool` under the hood).
 - When signing secrets are absent, the workflow falls back to an **unsigned** build (current behavior).
 
