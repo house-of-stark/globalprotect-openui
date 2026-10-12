@@ -95,7 +95,7 @@ The upstream GlobalProtect-openconnect project's `gpgui` binary is both propriet
    git clone https://github.com/yuezk/GlobalProtect-openconnect /tmp/gp-upstream
    cd /tmp/gp-upstream
    rm -f rust-toolchain.toml
-   cargo build --release -p gpauth --no-default-features
+   cargo build --release -p gpauth
    sudo install -m 755 target/release/gpauth /opt/homebrew/bin/gpauth
    ```
 
