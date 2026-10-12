@@ -44,17 +44,14 @@ impl TunnelHandle {
     let openconnect_bin = "/opt/homebrew/bin/openconnect";
     let os_flag = os.unwrap_or("mac-intel");
 
-    // Build the shell command. Important: the cookie must be quoted safely.
+    // Build the shell command. The cookie is piped via stdin to keep it out of `ps`.
     let mut parts: Vec<String> = vec![
       format!("'{}'", openconnect_bin),
       "--protocol=gp".to_string(),
       format!("--os={}", os_flag),
     ];
 
-    // Pass the cookie via stdin rather than argv (avoids exposure in `ps`).
-    parts.push(format!(
-      "--cookie-stdin"
-    ));
+    parts.push("--cookie-on-stdin".to_string());
 
     if disable_ipv6 {
       parts.push("--no-ipv6".to_string());
@@ -66,7 +63,7 @@ impl TunnelHandle {
     parts.push(format!("'{}'", gateway));
 
     // Pipe cookie + newline into openconnect via stdin.
-    // The `--cookie-stdin` flag tells openconnect to read the cookie from stdin.
+    // Using printf %s avoids interpretation of backslash sequences in the cookie.
     let shell_cmd = format!("printf '%s\\n' '{}' | {}", cookie, parts.join(" "));
 
     info!("Spawning openconnect tunnel to {}", gateway);
